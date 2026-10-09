@@ -379,3 +379,32 @@ def test_anchors_accumulate_across_blocks(tmp_path: Path) -> None:
     assert anchors["block_number"].nunique() == 2
     for _, per_block in anchors.groupby("block_number"):
         assert sorted(per_block["side"]) == ["buy", "sell"]
+
+
+def test_collect_steps_a_manual_replay_and_stops_at_its_end(tmp_path: Path) -> None:
+    """Each recorded block is followed by one step; a step that no longer moves ends it."""
+    last = amm_sim.BLOCK_NUMBER + 2
+    state = {"block": amm_sim.BLOCK_NUMBER, "steps": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/replay/advance":
+            state["steps"] += 1
+            state["block"] = min(state["block"] + 1, last)
+            return httpx.Response(200, json={"block": state["block"]})
+        order = json.loads(request.content)["orders"][0]
+        body = amm_sim.quote_response(order["token_in"], order["amount"])
+        body["orders"][0]["block"]["number"] = state["block"]
+        return httpx.Response(200, json=body)
+
+    with FyndClient(transport=httpx.MockTransport(handler)) as fynd:
+        result = collect_blocks(
+            fynd, make_config(), out_dir=tmp_path, poll_interval_s=0.0, advance_replay=True
+        )
+
+    assert load_jsonl(result.blocks_path)["block_number"].tolist() == [
+        amm_sim.BLOCK_NUMBER,
+        amm_sim.BLOCK_NUMBER + 1,
+        last,
+    ]
+    assert state["steps"] == 3
+    assert result.idle_probes == 0

@@ -171,9 +171,10 @@ def sweep_side(
     numeraire: TokenMeta,
     max_workers: int = 6,
     timeout_ms: int = 8000,
+    min_responses: int = 1,
 ) -> list[MeasuredRung]:
-    """Fan out one quote per rung (`min_responses=1`), sorted ascending by
-    notional. Failed rungs are skipped."""
+    """Fan out one quote per rung (`min_responses=1` unless asked otherwise),
+    sorted ascending by notional. Failed rungs are skipped."""
 
     def measure(rung: SizedRung) -> MeasuredRung | None:
         measured = quote_at_notional(
@@ -184,7 +185,7 @@ def sweep_side(
             spot=spot,
             token=token,
             numeraire=numeraire,
-            min_responses=1,
+            min_responses=min_responses,
             timeout_ms=timeout_ms,
             encoding=False,
         )

@@ -84,12 +84,13 @@ def _probe_price(
     numeraire: str,
     numeraire_decimals: int,
     probe_notional: float,
+    min_responses: int = 1,
 ) -> tuple[float, int | None]:
     """One quote spending `probe_notional` of numeraire on token, as the price in
     numeraire units per token unit and the block Fynd solved it against."""
     order = fynd.build_order(numeraire, token, atomic(probe_notional, numeraire_decimals))
     try:
-        orders = fynd.quote(order, min_responses=1, encoding=False).orders
+        orders = fynd.quote(order, min_responses=min_responses, encoding=False).orders
     except (FyndError, httpx.HTTPError, ValidationError) as error:
         raise SpotProbeError(f"spot probe request failed: {error}") from error
     if not orders:
@@ -118,6 +119,7 @@ def spot_price(
     numeraire: str,
     numeraire_decimals: int,
     probe_notional: float = DEFAULT_PROBE_NOTIONAL,
+    min_responses: int = 1,
 ) -> float:
     """Marginal price of `token` in numeraire units, from one probe quote that
     buys the token with `probe_notional` of numeraire (numeraire -> token)."""
@@ -128,6 +130,7 @@ def spot_price(
         numeraire=numeraire,
         numeraire_decimals=numeraire_decimals,
         probe_notional=probe_notional,
+        min_responses=min_responses,
     )
     return price
 

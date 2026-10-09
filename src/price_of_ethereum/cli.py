@@ -239,6 +239,15 @@ def build_parser() -> argparse.ArgumentParser:
             help="Seconds to wait for Fynd to finish cold-start hydration.",
         )
         sub.add_argument(
+            "--sweep-wait-all",
+            action="store_true",
+            help=(
+                "Sweep quotes wait for every solver pool (min_responses=0) instead of "
+                "taking the first answer. Slower; consistent on crossed books, where "
+                "the pools can disagree by tens of percent."
+            ),
+        )
+        sub.add_argument(
             "--poll-interval-s",
             type=_validated_poll_interval,
             default=None,
@@ -287,6 +296,14 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Number of distinct blocks to record (default: run until Ctrl-C).",
+    )
+    collect_parser.add_argument(
+        "--replay-step",
+        action="store_true",
+        help=(
+            "Fynd serves a recording (`fynd serve --replay`): step it to the next "
+            "block after each recorded one, and stop at the recording's end."
+        ),
     )
 
     init_worker_pools_parser = subparsers.add_parser(
@@ -515,6 +532,7 @@ def build_config(
         ),
         slippage=slippage,
         max_workers=args.max_workers,
+        sweep_min_responses=0 if args.sweep_wait_all else 1,
     )
 
 
@@ -567,6 +585,7 @@ def run_collect(
         out_dir=args.out,
         blocks=args.blocks,
         poll_interval_s=poll_interval_s,
+        advance_replay=args.replay_step,
     )
     print(
         f"recorded {result.blocks_recorded} blocks "

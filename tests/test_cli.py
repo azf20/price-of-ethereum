@@ -173,6 +173,23 @@ def test_build_config_skips_tycho_when_both_tokens_are_overridden() -> None:
     assert config.numeraire.decimals == 6
 
 
+def test_build_config_sweep_waits_for_every_pool_only_when_asked() -> None:
+    overridden = [
+        "--token-decimals",
+        "18",
+        "--token-symbol",
+        "WETH",
+        "--numeraire-decimals",
+        "6",
+        "--numeraire-symbol",
+        "USDC",
+    ]
+    first = build_config(build_parser().parse_args(["snapshot", *overridden]), 1, None)
+    assert first.sweep_min_responses == 1
+    args = build_parser().parse_args(["snapshot", "--sweep-wait-all", *overridden])
+    assert build_config(args, 1, None).sweep_min_responses == 0
+
+
 def test_build_config_resolves_only_the_unoverridden_token() -> None:
     args = build_parser().parse_args(
         ["snapshot", "--token-decimals", "18", "--token-symbol", "WETH"]

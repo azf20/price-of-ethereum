@@ -85,6 +85,10 @@ class SnapshotConfig:
     anchor_targets: tuple[float, ...] = DEFAULT_ANCHOR_TARGETS
     max_workers: int = 6
     timeout_ms: int = 8000
+    # Solver pools a spot, sweep or mid-probe quote waits for: 1 takes the first answer
+    # (fast), 0 waits for every pool. On a crossed book the pools can disagree by
+    # tens of percent, and the first answer is then a race between them.
+    sweep_min_responses: int = 1
     anchor_max_iters: int = 3
     anchor_bisect_tolerance: float = 0.02
     anchor_accept_tolerance: float = 0.05
@@ -406,7 +410,7 @@ def _mid_at_depth(
         spot=spot,
         token=config.token,
         numeraire=config.numeraire,
-        min_responses=1,
+        min_responses=config.sweep_min_responses,
         timeout_ms=config.timeout_ms,
         encoding=False,
     )
@@ -424,7 +428,7 @@ def _mid_at_depth(
         spot=spot,
         token=config.token,
         numeraire=config.numeraire,
-        min_responses=1,
+        min_responses=config.sweep_min_responses,
         timeout_ms=config.timeout_ms,
         encoding=False,
     )
@@ -473,6 +477,7 @@ def collect_snapshot(fynd: FyndClient, config: SnapshotConfig) -> Snapshot:
         numeraire=config.numeraire.address,
         numeraire_decimals=config.numeraire.decimals,
         probe_notional=config.probe_notional,
+        min_responses=config.sweep_min_responses,
     )
 
     grid = numeraire_grid(config.search_min, config.search_max, config.samples_per_side)
@@ -495,6 +500,7 @@ def collect_snapshot(fynd: FyndClient, config: SnapshotConfig) -> Snapshot:
                 numeraire=config.numeraire,
                 max_workers=config.max_workers,
                 timeout_ms=config.timeout_ms,
+                min_responses=config.sweep_min_responses,
             )
             for side in ("buy", "sell")
         }

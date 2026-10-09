@@ -124,6 +124,7 @@ def collect_blocks(
     blocks: int | None = None,
     poll_interval_s: float = 0.25,
     max_consecutive_failures: int = 5,
+    advance_replay: bool = False,
 ) -> CollectResult:
     """Record `blocks` distinct blocks (None = run until interrupted).
 
@@ -142,6 +143,11 @@ def collect_blocks(
     all) waits `poll_interval_s` and retries; `max_consecutive_failures` failures in
     a row raise `CollectionAbortedError` so a dead Fynd doesn't spin forever.
     Ctrl-C returns the partial result with `interrupted=True`.
+
+    With `advance_replay`, Fynd is a recorded market stepped by its client
+    (`fynd serve --replay`): each recorded block is followed
+    by a step to the next, so every block is measured exactly once however long
+    the sweep takes, and collection ends when a step no longer moves the block.
 
     Rows and anchors are appended before the block summary, so a block that
     appears in the summary file has all of its records on disk; a kill between
@@ -223,6 +229,9 @@ def collect_blocks(
                 snapshot.mid_source,
                 snapshot.duration_ms,
             )
+            if advance_replay and fynd.advance_replay() == last_block:
+                logger.info("replay finished at block %d", last_block)
+                break
             # An anchor-free block means every bisection failed to bracket its
             # target while the bulk sweep still succeeded, which the row and
             # block files cannot show.

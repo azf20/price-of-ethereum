@@ -110,6 +110,16 @@ class FyndClient:
                 f"unexpected or missing field(s). Check that Fynd is what is listening there.",
             ) from error
 
+    def advance_replay(self) -> int:
+        """Step a `fynd serve --replay` to its next block.
+
+        Returns the block now served once its derived data is computed; at the
+        recording's end the same block comes back.
+        """
+        response = self._http.post("/v1/replay/advance")
+        response.raise_for_status()
+        return int(response.json()["block"])
+
     def info(self) -> InstanceInfo:
         response = self._http.get("/v1/info")
         response.raise_for_status()
